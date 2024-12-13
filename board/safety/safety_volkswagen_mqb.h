@@ -2,11 +2,11 @@
 
 // lateral limits
 const SteeringLimits VOLKSWAGEN_MQB_STEERING_LIMITS = {
-  .max_steer = 300,              // 3.0 Nm (EPS side max of 3.0Nm with fault if violated)
-  .max_rt_delta = 75,            // 4 max rate up * 50Hz send rate * 250000 RT interval / 1000000 = 50 ; 50 * 1.5 for safety pad = 75
-  .max_rt_interval = 250000,     // 250ms between real time checks
-  .max_rate_up = 4,              // 2.0 Nm/s RoC limit (EPS rack has own soft-limit of 5.0 Nm/s)
-  .max_rate_down = 10,           // 5.0 Nm/s RoC limit (EPS rack has own soft-limit of 5.0 Nm/s)
+  .max_steer = 370             // 3.0 Nm (EPS side max of 3.0Nm with fault if violated)
+  .max_rt_delta = 188           // 4 max rate up * 50Hz send rate * 250000 RT interval / 1000000 = 50 ; 50 * 1.5 for safety pad = 75
+  .max_rt_interval = 24000,     // 250ms between real time checks
+  .max_rate_up = 10              // 2.0 Nm/s RoC limit (EPS rack has own soft-limit of 5.0 Nm/s)
+  .max_rate_down = 10           // 5.0 Nm/s RoC limit (EPS rack has own soft-limit of 5.0 Nm/s)
   .driver_torque_allowance = 80,
   .driver_torque_factor = 3,
   .type = TorqueDriverLimited,
@@ -20,6 +20,8 @@ const LongitudinalLimits VOLKSWAGEN_MQB_LONG_LIMITS = {
   .inactive_accel = 3010,  // VW sends one increment above the max range when inactive
 };
 
+#define MSG_HCA_NEW     0x303
+#define MSG_MOTOR_NEW_1 0x10B
 #define MSG_ESP_19      0x0B2   // RX from ABS, for wheel speeds
 #define MSG_LH_EPS_03   0x09F   // RX from EPS, for driver steering torque
 #define MSG_ESP_05      0x106   // RX from ABS, for brake switch state
@@ -34,9 +36,8 @@ const LongitudinalLimits VOLKSWAGEN_MQB_LONG_LIMITS = {
 #define MSG_LDW_02      0x397   // TX by OP, Lane line recognition and text alerts
 
 // Transmit of GRA_ACC_01 is allowed on bus 0 and 2 to keep compatibility with gateway and camera integration
-const CanMsg VOLKSWAGEN_MQB_STOCK_TX_MSGS[] = {{MSG_HCA_01, 0, 8}, {MSG_GRA_ACC_01, 0, 8}, {MSG_GRA_ACC_01, 2, 8},
-                                               {MSG_LDW_02, 0, 8}, {MSG_LH_EPS_03, 2, 8}};
-const CanMsg VOLKSWAGEN_MQB_LONG_TX_MSGS[] = {{MSG_HCA_01, 0, 8}, {MSG_LDW_02, 0, 8}, {MSG_LH_EPS_03, 2, 8},
+const CanMsg VOLKSWAGEN_MQB_STOCK_TX_MSGS[] = {{MSG_HCA_01, 0, 8}, {MSG_GRA_ACC_01, 0, 8}, {MSG_GRA_ACC_01, 2, 8}, {MSG_LDW_02, 0, 8}};
+const CanMsg VOLKSWAGEN_MQB_LONG_TX_MSGS[] = {{MSG_HCA_01, 0, 8}, {MSG_LDW_02, 0, 8},
                                               {MSG_ACC_02, 0, 8}, {MSG_ACC_06, 0, 8}, {MSG_ACC_07, 0, 8}};
 
 RxCheck volkswagen_mqb_rx_checks[] = {
@@ -46,7 +47,6 @@ RxCheck volkswagen_mqb_rx_checks[] = {
   {.msg = {{MSG_TSK_06, 0, 8, .check_checksum = true, .max_counter = 15U, .frequency = 50U}, { 0 }, { 0 }}},
   {.msg = {{MSG_MOTOR_20, 0, 8, .check_checksum = true, .max_counter = 15U, .frequency = 50U}, { 0 }, { 0 }}},
   {.msg = {{MSG_MOTOR_14, 0, 8, .check_checksum = false, .max_counter = 0U, .frequency = 10U}, { 0 }, { 0 }}},
-  {.msg = {{MSG_GRA_ACC_01, 0, 8, .check_checksum = true, .max_counter = 15U, .frequency = 33U}, { 0 }, { 0 }}},
 };
 
 uint8_t volkswagen_crc8_lut_8h2f[256]; // Static lookup table for CRC8 poly 0x2F, aka 8H2F/AUTOSAR
@@ -84,8 +84,6 @@ static uint32_t volkswagen_mqb_compute_crc(const CANPacket_t *to_push) {
     crc ^= (uint8_t[]){0xC4,0xE2,0x4F,0xE4,0xF8,0x2F,0x56,0x81,0x9F,0xE5,0x83,0x44,0x05,0x3F,0x97,0xDF}[counter];
   } else if (addr == MSG_MOTOR_20) {
     crc ^= (uint8_t[]){0xE9,0x65,0xAE,0x6B,0x7B,0x35,0xE5,0x5F,0x4E,0xC7,0x86,0xA2,0xBB,0xDD,0xEB,0xB4}[counter];
-  } else if (addr == MSG_GRA_ACC_01) {
-    crc ^= (uint8_t[]){0x6A,0x38,0xB4,0x27,0x22,0xEF,0xE1,0xBB,0xF8,0x80,0x84,0x49,0xC7,0x9E,0x1E,0x2B}[counter];
   } else {
     // Undefined CAN message, CRC check expected to fail
   }
@@ -106,8 +104,8 @@ static safety_config volkswagen_mqb_init(uint16_t param) {
   volkswagen_longitudinal = GET_FLAG(param, FLAG_VOLKSWAGEN_LONG_CONTROL);
 #endif
   gen_crc_lookup_table_8(0x2F, volkswagen_crc8_lut_8h2f);
-  return volkswagen_longitudinal ? BUILD_SAFETY_CFG(volkswagen_mqb_rx_checks, VOLKSWAGEN_MQB_LONG_TX_MSGS) : \
-                                   BUILD_SAFETY_CFG(volkswagen_mqb_rx_checks, VOLKSWAGEN_MQB_STOCK_TX_MSGS);
+  return volkswagen_longitudinal ? BUILD_SAFETY_CFG(default_rx_checks, VOLKSWAGEN_MQB_LONG_TX_MSGS) : \
+                                   BUILD_SAFETY_CFG(default_rx_checks, VOLKSWAGEN_MQB_STOCK_TX_MSGS);
 }
 
 static void volkswagen_mqb_rx_hook(const CANPacket_t *to_push) {
@@ -138,11 +136,11 @@ static void volkswagen_mqb_rx_hook(const CANPacket_t *to_push) {
       update_sample(&torque_driver, torque_driver_new);
     }
 
-    if (addr == MSG_TSK_06) {
+    if (addr == MSG_MOTOR_NEW_1) {
       // When using stock ACC, enter controls on rising edge of stock ACC engage, exit on disengage
       // Always exit controls on main switch off
       // Signal: TSK_06.TSK_Status
-      int acc_status = (GET_BYTE(to_push, 3) & 0x7U);
+      int acc_status = (GET_BYTE(to_push, 11) & 0x7U);
       bool cruise_engaged = (acc_status == 3) || (acc_status == 4) || (acc_status == 5);
       acc_main_on = cruise_engaged || (acc_status == 2);
 
@@ -170,7 +168,7 @@ static void volkswagen_mqb_rx_hook(const CANPacket_t *to_push) {
       }
       // Always exit controls on rising edge of Cancel
       // Signal: GRA_ACC_01.GRA_Abbrechen
-      if (GET_BIT(to_push, 13U)) {
+      if (GET_BIT(to_push, 13U) == 1U) {
         controls_allowed = false;
       }
     }
@@ -250,6 +248,9 @@ static bool volkswagen_mqb_tx_hook(const CANPacket_t *to_send) {
     }
   }
 
+  // 1 allows the message through
+  tx = 1;
+
   return tx;
 }
 
@@ -258,16 +259,12 @@ static int volkswagen_mqb_fwd_hook(int bus_num, int addr) {
 
   switch (bus_num) {
     case 0:
-      if (addr == MSG_LH_EPS_03) {
-        // openpilot needs to replace apparent driver steering input torque to pacify VW Emergency Assist
-        bus_fwd = -1;
-      } else {
-        // Forward all remaining traffic from Extended CAN onward
-        bus_fwd = 2;
-      }
+      // Forward all traffic from the Extended CAN onward
+      bus_fwd = 2;
       break;
     case 2:
-      if ((addr == MSG_HCA_01) || (addr == MSG_LDW_02)) {
+      //if ((addr == MSG_HCA_01) || (addr == MSG_LDW_02)) {
+      if (addr == MSG_HCA_NEW) {
         // openpilot takes over LKAS steering control and related HUD messages from the camera
         bus_fwd = -1;
       } else if (volkswagen_longitudinal && ((addr == MSG_ACC_02) || (addr == MSG_ACC_06) || (addr == MSG_ACC_07))) {
@@ -291,8 +288,6 @@ const safety_hooks volkswagen_mqb_hooks = {
   .init = volkswagen_mqb_init,
   .rx = volkswagen_mqb_rx_hook,
   .tx = volkswagen_mqb_tx_hook,
+  .tx_lin = nooutput_tx_lin_hook,
   .fwd = volkswagen_mqb_fwd_hook,
-  .get_counter = volkswagen_mqb_get_counter,
-  .get_checksum = volkswagen_mqb_get_checksum,
-  .compute_checksum = volkswagen_mqb_compute_crc,
 };
