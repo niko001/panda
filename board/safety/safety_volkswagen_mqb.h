@@ -104,8 +104,7 @@ static safety_config volkswagen_mqb_init(uint16_t param) {
   volkswagen_longitudinal = GET_FLAG(param, FLAG_VOLKSWAGEN_LONG_CONTROL);
 #endif
   gen_crc_lookup_table_8(0x2F, volkswagen_crc8_lut_8h2f);
-  //return volkswagen_longitudinal ? BUILD_SAFETY_CFG(default_rx_checks, VOLKSWAGEN_MQB_LONG_TX_MSGS) : \
-                                   BUILD_SAFETY_CFG(default_rx_checks, VOLKSWAGEN_MQB_STOCK_TX_MSGS);
+  //return volkswagen_longitudinal ? BUILD_SAFETY_CFG(default_rx_checks, VOLKSWAGEN_MQB_LONG_TX_MSGS) : BUILD_SAFETY_CFG(default_rx_checks, VOLKSWAGEN_MQB_STOCK_TX_MSGS);
   return (safety_config){NULL, 0, NULL, 0};
 }
 
