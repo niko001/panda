@@ -210,7 +210,7 @@ static bool volkswagen_mqb_tx_hook(const CANPacket_t *to_send) {
   }
 
   // 1 allows the message through
-  tx = 1;
+  tx = true;
 
   return tx;
 }
