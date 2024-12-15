@@ -53,9 +53,6 @@ RxCheck volkswagen_mqb_rx_checks[] = {
   {.msg = {{MSG_MOTOR_14, 0, 8, .check_checksum = false, .max_counter = 0U, .frequency = 10U}, { 0 }, { 0 }}},
 };
 
-//To switch to no RX checks at all, use
-//static RxCheck empty_rx_checks[] = {}; // no RX checks
-//in return BUILD_SAFETY_CFG()
 
 uint8_t volkswagen_crc8_lut_8h2f[256]; // Static lookup table for CRC8 poly 0x2F, aka 8H2F/AUTOSAR
 bool volkswagen_mqb_brake_pedal_switch = false;
@@ -73,8 +70,6 @@ static safety_config volkswagen_mqb_init(uint16_t param) {
   volkswagen_longitudinal = GET_FLAG(param, FLAG_VOLKSWAGEN_LONG_CONTROL);
 #endif
   gen_crc_lookup_table_8(0x2F, volkswagen_crc8_lut_8h2f);
-  //return volkswagen_longitudinal ? BUILD_SAFETY_CFG(default_rx_checks, VOLKSWAGEN_MQB_LONG_TX_MSGS) : BUILD_SAFETY_CFG(default_rx_checks, VOLKSWAGEN_MQB_STOCK_TX_MSGS);
-  //return (safety_config){NULL, 0, NULL, 0};
 
   if (volkswagen_longitudinal) {
     return BUILD_SAFETY_CFG(volkswagen_mqb_rx_checks, VOLKSWAGEN_MQB_LONG_TX_MSGS);
