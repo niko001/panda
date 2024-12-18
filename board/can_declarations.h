@@ -9,7 +9,7 @@
   #define CANFD
   #define CANPACKET_DATA_SIZE_MAX 64U
 #else
-  #define CANPACKET_DATA_SIZE_MAX 8U
+  #define CANPACKET_DATA_SIZE_MAX 64U
 #endif
 
 typedef struct {
