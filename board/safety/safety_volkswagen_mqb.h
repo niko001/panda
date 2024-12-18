@@ -64,7 +64,7 @@ static void volkswagen_mqb_rx_hook(const CANPacket_t *to_push) {
     if (addr == MSG_ESP_NEW_1) {
       // sum 4 wheel speeds
       int speed = 0;
-      for (uint8_t i = 11U; i < 19U; i += 2U) {
+      for (uint8_t i = 0U; i < 8U; i += 2U) {
         int wheel_speed = GET_BYTE(to_push, i) | (GET_BYTE(to_push, i + 1U) << 8);
         speed += wheel_speed;
       }
