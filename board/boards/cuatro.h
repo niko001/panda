@@ -6,22 +6,6 @@
 // Cuatro (STM32H7) + Harness //
 // ////////////////////////// //
 
-static void cuatro_set_led(uint8_t color, bool enabled) {
-  switch (color) {
-    case LED_RED:
-      set_gpio_output(GPIOC, 6, !enabled);
-      break;
-    case LED_GREEN:
-      set_gpio_output(GPIOC, 7, !enabled);
-      break;
-    case LED_BLUE:
-      set_gpio_output(GPIOC, 9, !enabled);
-      break;
-    default:
-      break;
-  }
-}
-
 static void cuatro_enable_can_transceiver(uint8_t transceiver, bool enabled) {
   switch (transceiver) {
     case 1U:
@@ -56,7 +40,7 @@ static void cuatro_set_fan_enabled(bool enabled) {
 static void cuatro_set_bootkick(BootState state) {
   set_gpio_output(GPIOA, 0, state != BOOT_BOOTKICK);
   // TODO: confirm we need this
-  set_gpio_output(GPIOC, 12, state != BOOT_RESET);
+  //set_gpio_output(GPIOC, 12, state != BOOT_RESET);
 }
 
 static void cuatro_set_amp_enabled(bool enabled){
@@ -66,12 +50,7 @@ static void cuatro_set_amp_enabled(bool enabled){
 static void cuatro_init(void) {
   common_init_gpio();
 
-  // init LEDs as open drain
-  set_gpio_output_type(GPIOC, 6, OUTPUT_TYPE_OPEN_DRAIN);
-  set_gpio_output_type(GPIOC, 7, OUTPUT_TYPE_OPEN_DRAIN);
-  set_gpio_output_type(GPIOC, 9, OUTPUT_TYPE_OPEN_DRAIN);
-
-  // more open drain
+  // open drain
   set_gpio_output_type(GPIOD, 3, OUTPUT_TYPE_OPEN_DRAIN); // FAN_EN
   set_gpio_output_type(GPIOC, 12, OUTPUT_TYPE_OPEN_DRAIN); // VBAT_EN
 
@@ -112,7 +91,7 @@ static void cuatro_init(void) {
   tres_set_ir_power(0U);
 
   // Clock source
-  clock_source_init();
+  clock_source_init(true);
 
   // Sound codec
   cuatro_set_amp_enabled(false);
@@ -126,8 +105,22 @@ static void cuatro_init(void) {
   sound_init();
 }
 
+static harness_configuration cuatro_harness_config = {
+  .has_harness = true,
+  .GPIO_SBU1 = GPIOC,
+  .GPIO_SBU2 = GPIOA,
+  .GPIO_relay_SBU1 = GPIOA,
+  .GPIO_relay_SBU2 = GPIOA,
+  .pin_SBU1 = 4,
+  .pin_SBU2 = 1,
+  .pin_relay_SBU1 = 9,
+  .pin_relay_SBU2 = 3,
+  .adc_channel_SBU1 = 4, // ADC12_INP4
+  .adc_channel_SBU2 = 17 // ADC1_INP17
+};
+
 board board_cuatro = {
-  .harness_config = &tres_harness_config,
+  .harness_config = &cuatro_harness_config,
   .has_spi = true,
   .has_canfd = true,
   .fan_max_rpm = 12500U,
@@ -138,7 +131,8 @@ board board_cuatro = {
   .init = cuatro_init,
   .init_bootloader = unused_init_bootloader,
   .enable_can_transceiver = cuatro_enable_can_transceiver,
-  .set_led = cuatro_set_led,
+  .led_GPIO = {GPIOC, GPIOC, GPIOC},
+  .led_pin = {6, 7, 9},
   .set_can_mode = tres_set_can_mode,
   .check_ignition = red_check_ignition,
   .read_voltage_mV = cuatro_read_voltage_mV,

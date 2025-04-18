@@ -129,7 +129,7 @@ static void tres_init(void) {
   register_set_bits(&(GPIOC->OTYPER), GPIO_OTYPER_OT10 | GPIO_OTYPER_OT11); // open drain
 
   // Clock source
-  clock_source_init();
+  clock_source_init(false);
 }
 
 static harness_configuration tres_harness_config = {
@@ -158,7 +158,8 @@ board board_tres = {
   .init = tres_init,
   .init_bootloader = unused_init_bootloader,
   .enable_can_transceiver = tres_enable_can_transceiver,
-  .set_led = red_set_led,
+  .led_GPIO = {GPIOE, GPIOE, GPIOE},
+  .led_pin = {4, 3, 2},
   .set_can_mode = tres_set_can_mode,
   .check_ignition = red_check_ignition,
   .read_voltage_mV = red_read_voltage_mV,
