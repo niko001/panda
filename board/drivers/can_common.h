@@ -161,9 +161,9 @@ void can_set_forwarding(uint8_t from, uint8_t to) {
 #endif
 
 void ignition_can_hook(CANPacket_t *msg) {
-  int bus = GET_BUS(msg);
+  int bus = msg->bus;
   if (bus == 0) {
-    int addr = GET_ADDR(msg);
+    int addr = msg->addr;
     int len = GET_LEN(msg);
 
     // GM exception
@@ -210,7 +210,7 @@ void ignition_can_hook(CANPacket_t *msg) {
 
     // Volkswagen MEB exception
     if ((addr == 0x3C0) && (len == 4)) {
-      ignition_can = GET_BIT(to_push, 17U);
+      ignition_can = GET_BIT(msg, 17U);
       ignition_can_cnt = 0U;
     }
 
